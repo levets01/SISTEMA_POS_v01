@@ -1,0 +1,13 @@
+{
+  "name": "@puesto/web",
+  "private": true,
+  "dependencies": {
+    "@fontsource-variable/dm-sans": "^5.3.0",
+    "@puesto/shared": "workspace:*",
+    "@zxing/browser": "0.2.1",
+    "@zxing/library": "0.23.0",
+    "lucide-react": "1.76.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  }
+}

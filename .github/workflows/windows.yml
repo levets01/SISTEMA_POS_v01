@@ -1,0 +1,51 @@
+name: Puesto POS en Windows
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  validar:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+      - run: corepack pnpm install --frozen-lockfile
+      - run: corepack pnpm check
+      - run: corepack pnpm test
+      - run: corepack pnpm build
+      - run: corepack pnpm exec playwright install chromium
+      - run: corepack pnpm test:e2e
+      - run: node scripts/package.mjs
+      - run: node tests/desktop-smoke.mjs
+  publicar:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: validar
+    runs-on: windows-latest
+    environment: distribucion
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+      - name: Verificar coincidencia entre tag y paquete
+        shell: pwsh
+        run: |
+          $versionPOS = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_NAME -cne "v$versionPOS") { throw "El tag debe coincidir con package.json" }
+      - run: corepack pnpm install --frozen-lockfile
+      - name: Firmar y publicar el instalador NSIS
+        run: corepack pnpm release:win
+        env:
+          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          POS_PUBLISHER: ${{ vars.POS_PUBLISHER }}
+          POS_RELEASE_REPO: ${{ vars.POS_RELEASE_REPO }}
+          GH_TOKEN: ${{ secrets.POS_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
